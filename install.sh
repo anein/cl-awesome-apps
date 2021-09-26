@@ -26,8 +26,9 @@ has_needed_packages() {
 echo "What would you like to install?"
 
 select app_name in "${AVAILABLE_APPS[@]}"; do
-  script_path="./scripts/${app_name,,}.sh"
+  script_path=$( echo "./scripts/${app_name}.sh" | tr '[:upper:]' '[:lower:]')
   echo "${app_name}"
+  echo "$script_path"
 
   # check for script existence.
   if ! [ -e "$script_path" ]; then
@@ -41,7 +42,7 @@ select app_name in "${AVAILABLE_APPS[@]}"; do
     break
   fi
 
-  # run inner script for selected application.
+  # run inner script for a selected application.
   bash $script_path
   break
 

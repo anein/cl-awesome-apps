@@ -15,6 +15,9 @@ OPERA_BASE_URL="https://rpm.opera.com/rpm/"
 # Opera build type: stable, developer, beta.
 OPERA_BUILD_TYPE=opera_stable
 
+# Opera codecs are traditionally chromium codecs.
+OPERA_CODECS_URL="https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/Extra/x86_64/"
+
 # Path to custom lib dir.
 LIB_DIR=/usr/local/
 
@@ -95,3 +98,44 @@ cp "$OPERA_HOME_DIR/usr/share/applications/opera.desktop" "/home/$USER/.local/sh
 sed -i "s|^Exec=opera|Exec=${OPERA_HOME_DIR}/usr/bin/opera|" "/home/$USER/.local/share/applications/opera.desktop"
 # Remove TryExec line to avoid searching issue.
 sed -i "/^TryExec/d" "/home/$USER/.local/share/applications/opera.desktop"
+
+########################### Step 4. Codecs installations. (Optional)
+
+echo -e -n "\n 4. Codecs installations. (Optional).  \e[m"
+
+select answer in "Yes" "No"; do
+  if [ $answer == "No" ]; then
+    echo "${answer}"
+    exit
+  else
+    break
+  fi
+done
+
+# Get chromium package name
+codecs_package_name=$(wget "${OPERA_CODECS_URL}" -O - 2>/dev/null | grep -oP "(?<=\")(chromium-ffmpeg-extra-(\d*((\.|\-|x|_)\d*)?)+\.rpm)" | tail -n1)
+
+if [ -z "$codecs_package_name" ]; then
+  echo -e " \e[31m Abort. \e[m"
+  echo -e "\e[31m > Cannot get the version of codecs . \e[m"
+  exit
+fi
+
+# Download codecs
+tmp_dist="/tmp/${codecs_package_name}"
+
+echo -e -n "\n 4. Downloading codecs.\t     "
+wget "${OPERA_CODECS_URL}${codecs_package_name}" --progress=dot -O ${tmp_dist} 2>&1 | grep --line-buffered "%" | sed -u -e "s,\.,,g" | awk '{printf("\b\b\b\b%4s", $2)}'
+
+# We should be convinced that the codecs were downloaded.
+if [ -e "$tmp_dist" ]; then
+  echo -e "\t \e[92m Done. \e[m \r"
+  echo " > Downloaded to: ${tmp_dist}"
+else
+  echo -e " \e[31m Abort. \e[m"
+  echo -e "\e[31m > Cannot find downloaded file in $tmp_dist \e[m"
+  exit
+fi
+
+echo -e -n "\n 5. Installing codecs."
+rpm2cpio "$tmp_dist" | cpio -D "$OPERA_HOME_DIR" -idmv 2>/dev/null
